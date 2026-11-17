@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:smart_memories/features/auth/data/models/user_dto.dart';
 
 part 'auth_dtos.freezed.dart';
 part 'auth_dtos.g.dart';
@@ -16,7 +15,7 @@ abstract class LoginRequestDto with _$LoginRequestDto {
       _$LoginRequestDtoFromJson(json);
 }
 
-/// Body of POST /auth/register.
+/// Body of POST /auth/signup.
 @freezed
 abstract class RegisterRequestDto with _$RegisterRequestDto {
   const factory RegisterRequestDto({
@@ -29,15 +28,16 @@ abstract class RegisterRequestDto with _$RegisterRequestDto {
       _$RegisterRequestDtoFromJson(json);
 }
 
-/// Response of login and register: both tokens plus the user.
+/// `data` of POST /auth/login: the two tokens only. The user comes from
+/// GET /users/me, and signup returns the user but no tokens, so signing up
+/// is signup followed by login (see AuthRepositoryImpl).
 @freezed
-abstract class AuthResponseDto with _$AuthResponseDto {
-  const factory AuthResponseDto({
+abstract class TokensDto with _$TokensDto {
+  const factory TokensDto({
     required String accessToken,
     required String refreshToken,
-    required UserDto user,
-  }) = _AuthResponseDto;
+  }) = _TokensDto;
 
-  factory AuthResponseDto.fromJson(Map<String, dynamic> json) =>
-      _$AuthResponseDtoFromJson(json);
+  factory TokensDto.fromJson(Map<String, dynamic> json) =>
+      _$TokensDtoFromJson(json);
 }

@@ -18,7 +18,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   Future<List<DeviceSessionDto>> getSessions() async {
     final response = await _dio.get<dynamic>(ApiEndpoints.sessions);
     return parseDtoList(
-      response.data,
+      unwrapData(response.data),
       DeviceSessionDto.fromJson,
       name: 'DeviceSessionDto',
     );

@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 /// Thrown when a response body does not match the DTO it should become.
 /// The message names the DTO and the field, for example:
-///   AuthResponseDto: field "accessToken" is missing or has the wrong type.
+///   TokensDto: field "accessToken" is missing or has the wrong type.
 /// safeApiCall converts it into a friendly ApiError; it never reaches the UI.
 class DtoParsingException implements Exception {
   const DtoParsingException(this.message);
@@ -11,6 +11,15 @@ class DtoParsingException implements Exception {
 
   @override
   String toString() => 'DtoParsingException: $message';
+}
+
+/// The backend wraps every success body as `{ "message": ..., "data": ... }`.
+/// Returns the `data` part, or [body] unchanged when there is no wrapper.
+///
+///   final dto = parseDto(unwrapData(response.data), UserDto.fromJson, ...);
+Object? unwrapData(Object? body) {
+  if (body is Map && body.containsKey('data')) return body['data'];
+  return body;
 }
 
 /// Converts a decoded JSON value into a DTO without crashing on bad data.

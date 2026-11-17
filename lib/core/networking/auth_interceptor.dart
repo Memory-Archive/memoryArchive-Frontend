@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:smart_memories/core/constants/api_endpoints.dart';
 import 'package:smart_memories/core/storage/token_storage.dart';
+import 'package:smart_memories/core/validation/safe_json.dart';
 
 /// Attaches the access token to every non-public request and, on a 401,
 /// refreshes the token ONCE and replays the request. If the refresh fails
@@ -97,7 +98,7 @@ class AuthInterceptor extends QueuedInterceptor {
       ApiEndpoints.refresh,
       data: <String, dynamic>{'refreshToken': refreshToken},
     );
-    final body = response.data;
+    final body = unwrapData(response.data);
     final Object? access = body is Map ? body['accessToken'] : null;
     final Object? rotated = body is Map ? body['refreshToken'] : null;
     if (access is! String || access.isEmpty) {

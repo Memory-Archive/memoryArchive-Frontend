@@ -114,7 +114,6 @@ class MockMemoriesRemoteDataSource implements MemoriesRemoteDataSource {
       statusCode: 404,
       body: <String, dynamic>{
         'message': 'This memory no longer exists.',
-        'code': 'MEMORY_NOT_FOUND',
       },
     );
   }

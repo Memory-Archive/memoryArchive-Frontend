@@ -37,8 +37,11 @@ Generated files (`*.freezed.dart`, `*.g.dart`) are not committed. Re-run the gen
 | Mode | Command |
 |---|---|
 | Mock data (no backend) | `flutter run --dart-define=USE_MOCK=true` |
-| Real backend, Android emulator | `flutter run` (uses `http://10.0.2.2:3000/api`) |
-| Real backend, other address | `flutter run --dart-define=API_BASE_URL=http://192.168.1.20:3000/api` |
+| Real backend, Chrome | `flutter run -d chrome --web-port=5000` (uses `http://localhost:3000`) |
+| Real backend, Android emulator | `flutter run` (uses `http://10.0.2.2:3000`) |
+| Real backend, other address | `flutter run --dart-define=API_BASE_URL=http://192.168.1.20:3000` |
+
+The backend routes live at the root (`/auth/login`, `/memories`), so the base URL has no `/api`. When running in Chrome, the backend's `CORS_ORIGIN` must be `http://localhost:5000` (the port you pass to `--web-port`).
 
 In mock mode any email and password log in. Two addresses demonstrate error handling:
 
@@ -140,24 +143,21 @@ Copy the shape of `features/auth`. Using `collections` as the example:
 
 Security notes: tokens are kept in secure storage only; request headers are never logged; `/auth/` requests are not logged at all; logging is disabled outside debug builds; a 401 triggers exactly one token refresh, and a failed refresh logs the user out.
 
-## Assumptions to confirm with the backend developer
+## Backend contract (from memoryArchive-backend)
 
-1. **Base URL** is `http://<host>:3000/api`.
-2. **Error body** is `{ "message": string, "code": string, "errors": [{ "field": string, "message": string }] }`. `errors[].field` uses the same names as the request body (`email`, `password`, `username`, `title`, `memoryDate`).
-3. **Success bodies are the object or array itself**, with no `{ "data": ... }` wrapper, and use **camelCase** keys.
-4. **Auth uses a Bearer access token** in the `Authorization` header, plus a refresh token sent in the request body (not a cookie).
-5. `POST /auth/login` takes `{ email, password }`; `POST /auth/register` takes `{ username, email, password }`. Both return `{ accessToken, refreshToken, user }`.
-6. `POST /auth/refresh` takes `{ refreshToken }` and returns `{ accessToken, refreshToken? }`. If a new refresh token is returned it replaces the old one (rotation).
-7. `POST /auth/logout` takes `{ refreshToken }` and revokes it.
-8. **An expired or invalid access token returns 401**, and only 401. A failed login also returns 401; the app does not try to refresh on the login, register or refresh endpoints.
-9. `GET /me` returns the user: `{ id, username, email, displayName?, bio?, passwordChangedAt? }`. Ids are strings (UUIDs).
-10. `GET /me/sessions` returns `[{ id, deviceName, location?, lastActiveAt, isCurrent }]`; `DELETE /me/sessions/:id` logs that device out.
-11. `GET /memories?limit=3&sort=-memoryDate` returns an array of memories, newest first.
-12. `GET /memories/on-this-day` returns an array. The server decides what "today" is; confirm whether it uses the user's time zone.
-13. `GET /memories/:id`, `POST /memories`, `DELETE /memories/:id`. A memory is `{ id, title, memoryDate, description?, memoryTime?, placeName?, coverUrl?, photoUrls[], photoCount, tags[], taggedPeople[], musicUrl?, collectionName?, sharedWithCount }`.
-14. **Dates:** `memoryDate` is `"YYYY-MM-DD"`, `memoryTime` is `"HH:mm"`, timestamps are ISO-8601 in UTC.
-15. **Password rule:** at least 10 and at most 128 characters. The app enforces the same rule before sending.
-16. **Image URLs** (`coverUrl`, `photoUrls`) can be loaded directly by the app, for example short-lived signed URLs.
+Checked against the backend source. "Not implemented yet" means the route exists but the server still answers 501, so the app cannot use it until the backend developer builds it.
+
+1. **Base URL** has no prefix: `http://<host>:3000`.
+2. **Success body** is `{ "message": string, "data": ... }`. The app unwraps `data` with `unwrapData` (`core/validation/safe_json.dart`).
+3. **Error body** is `{ "message": string, "details"?: ... }`. For validation errors (400) `details` is `[{ "location": "body", "path": "email", "message": string }]`. A taken email or username is a 409 with only a message; the app attaches it to the matching field. All parsing is in `core/networking/backend_error_format.dart`.
+4. `POST /auth/signup` takes `{ username, email, password, displayName? }` and returns 201 `data: { user }` with **no tokens**. The app therefore signs up and then logs in. Username: 3 to 30 characters, letters, numbers, `_` and `.`. Password: 8 to 128 characters on the server (the app requires 10).
+5. `POST /auth/login` takes `{ email, password, deviceName? }` and is meant to return `data: { accessToken, refreshToken }`. **Not implemented yet.**
+6. `POST /auth/refresh` and `POST /auth/logout` take `{ refreshToken }`. **Not implemented yet.** Refresh tokens are opaque and rotate on every refresh.
+7. `GET /users/me`, `GET /users/me/sessions` and `DELETE /users/me/sessions/:sessionId`. **Not implemented yet.** `/users/me` is assumed to return the user (directly or as `{ user }`).
+8. Protected routes need `Authorization: Bearer <accessToken>`. The authentication middleware is **not implemented yet**, so every protected route answers 501 after the header check.
+9. `GET /memories` takes `page`, `limit`, `from`, `to`, `placeId`, `tagId`, `q` and `sort=newest|oldest`. **Not implemented yet**, and the list shape (plain array or paginated object) is unknown. `GET /memories/on-this-day` does not exist. The app's memory models (`placeName`, `coverUrl`, `photoUrls` ...) have not been matched to the backend yet.
+10. Ids are UUID strings; dates are `YYYY-MM-DD`; timestamps are ISO-8601.
+11. **Not in the backend yet:** the app's profile "device sessions" screen expects `deviceName`, `location`, `lastActiveAt` and `isCurrent`; confirm these names when sessions are built.
 
 ## Missing from the design
 

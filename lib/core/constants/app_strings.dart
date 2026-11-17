@@ -26,5 +26,8 @@ abstract final class AppStrings {
   static const String serverError =
       'The server ran into a problem. Please try again later.';
 
+  static const String notImplemented =
+      'This feature is not available on the server yet.';
+
   static const String notAvailableYet = 'This is not available yet.';
 }

@@ -24,21 +24,33 @@ class MemoriesRemoteDataSourceImpl implements MemoriesRemoteDataSource {
   Future<List<MemoryDto>> getRecent({required int limit}) async {
     final response = await _dio.get<dynamic>(
       ApiEndpoints.memories,
-      queryParameters: <String, dynamic>{'limit': limit, 'sort': '-memoryDate'},
+      queryParameters: <String, dynamic>{'limit': limit, 'sort': 'newest'},
     );
-    return parseDtoList(response.data, MemoryDto.fromJson, name: 'MemoryDto');
+    return parseDtoList(
+      unwrapData(response.data),
+      MemoryDto.fromJson,
+      name: 'MemoryDto',
+    );
   }
 
   @override
   Future<List<MemoryDto>> getOnThisDay() async {
     final response = await _dio.get<dynamic>(ApiEndpoints.memoriesOnThisDay);
-    return parseDtoList(response.data, MemoryDto.fromJson, name: 'MemoryDto');
+    return parseDtoList(
+      unwrapData(response.data),
+      MemoryDto.fromJson,
+      name: 'MemoryDto',
+    );
   }
 
   @override
   Future<MemoryDto> getById(String id) async {
     final response = await _dio.get<dynamic>(ApiEndpoints.memory(id));
-    return parseDto(response.data, MemoryDto.fromJson, name: 'MemoryDto');
+    return parseDto(
+      unwrapData(response.data),
+      MemoryDto.fromJson,
+      name: 'MemoryDto',
+    );
   }
 
   @override
@@ -47,7 +59,11 @@ class MemoriesRemoteDataSourceImpl implements MemoriesRemoteDataSource {
       ApiEndpoints.memories,
       data: request.toJson(),
     );
-    return parseDto(response.data, MemoryDto.fromJson, name: 'MemoryDto');
+    return parseDto(
+      unwrapData(response.data),
+      MemoryDto.fromJson,
+      name: 'MemoryDto',
+    );
   }
 
   @override

@@ -86,42 +86,49 @@ void main() {
       expect(error.code, ApiErrorCodes.cancelled);
     });
 
-    test('reads message, code and field errors from the backend format', () async {
+    test('reads message and field errors from the backend format', () async {
       final error = await _failWith(
         _dioError(
           DioExceptionType.badResponse,
-          statusCode: 422,
+          statusCode: 400,
           body: <String, dynamic>{
-            'message': 'Please fix the highlighted fields.',
-            'code': 'VALIDATION_ERROR',
-            'errors': <Map<String, dynamic>>[
-              <String, dynamic>{'field': 'email', 'message': 'Already registered.'},
-              <String, dynamic>{'field': 'password', 'message': 'Too short.'},
+            'message': 'Validation failed',
+            'details': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'location': 'body',
+                'path': 'email',
+                'message': 'Invalid email address',
+              },
+              <String, dynamic>{
+                'location': 'body',
+                'path': 'password',
+                'message': 'Too small',
+              },
             ],
           },
         ),
       );
 
-      expect(error.statusCode, 422);
-      expect(error.code, 'VALIDATION_ERROR');
-      expect(error.message, 'Please fix the highlighted fields.');
+      expect(error.statusCode, 400);
+      expect(error.code, 'HTTP_400');
+      expect(error.message, 'Validation failed');
       expect(error.fieldErrors, hasLength(2));
-      expect(error.messageFor('email'), 'Already registered.');
-      expect(error.messageFor('password'), 'Too short.');
+      expect(error.messageFor('email'), 'Invalid email address');
+      expect(error.messageFor('password'), 'Too small');
       expect(error.messageFor('username'), isNull);
     });
 
-    test('ignores malformed entries in the errors array', () async {
+    test('ignores malformed entries in the details array', () async {
       final error = await _failWith(
         _dioError(
           DioExceptionType.badResponse,
           statusCode: 400,
           body: <String, dynamic>{
             'message': 'Bad request.',
-            'errors': <Object?>[
+            'details': <Object?>[
               'not an object',
-              <String, dynamic>{'field': 'email'},
-              <String, dynamic>{'field': 'title', 'message': 'Required.'},
+              <String, dynamic>{'path': 'email'},
+              <String, dynamic>{'path': 'title', 'message': 'Required.'},
             ],
           },
         ),
@@ -130,6 +137,48 @@ void main() {
       expect(error.fieldErrors, hasLength(1));
       expect(error.messageFor('title'), 'Required.');
       expect(error.code, 'HTTP_400');
+    });
+
+    test('ignores details that is a string (development 500 errors)', () async {
+      final error = await _failWith(
+        _dioError(
+          DioExceptionType.badResponse,
+          statusCode: 500,
+          body: <String, dynamic>{
+            'message': 'Internal server error',
+            'details': 'ECONNREFUSED',
+          },
+        ),
+      );
+
+      expect(error.fieldErrors, isEmpty);
+      expect(error.message, 'Internal server error');
+    });
+
+    test('puts a 409 "Email is already registered" under the email field', () async {
+      final error = await _failWith(
+        _dioError(
+          DioExceptionType.badResponse,
+          statusCode: 409,
+          body: <String, dynamic>{'message': 'Email is already registered'},
+        ),
+      );
+
+      expect(error.messageFor('email'), 'Email is already registered');
+      expect(error.messageFor('username'), isNull);
+    });
+
+    test('puts a 409 "Username is already taken" under the username field', () async {
+      final error = await _failWith(
+        _dioError(
+          DioExceptionType.badResponse,
+          statusCode: 409,
+          body: <String, dynamic>{'message': 'Username is already taken'},
+        ),
+      );
+
+      expect(error.messageFor('username'), 'Username is already taken');
+      expect(error.messageFor('email'), isNull);
     });
 
     test('falls back to a friendly message when the body is not JSON', () async {

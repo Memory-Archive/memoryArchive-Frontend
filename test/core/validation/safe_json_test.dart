@@ -12,6 +12,37 @@ class _Item {
 }
 
 void main() {
+  group('unwrapData', () {
+    test('returns the data part of a { message, data } envelope', () {
+      expect(
+        unwrapData(<String, dynamic>{
+          'message': 'Done',
+          'data': <String, dynamic>{'id': 'a1'},
+        }),
+        <String, dynamic>{'id': 'a1'},
+      );
+    });
+
+    test('returns a list inside the envelope', () {
+      expect(
+        unwrapData(<String, dynamic>{
+          'message': 'Done',
+          'data': <Object?>[1, 2],
+        }),
+        <Object?>[1, 2],
+      );
+    });
+
+    test('leaves a body without a data key unchanged', () {
+      final body = <String, dynamic>{'message': 'Done'};
+      expect(unwrapData(body), same(body));
+    });
+
+    test('leaves null unchanged', () {
+      expect(unwrapData(null), isNull);
+    });
+  });
+
   group('parseDto', () {
     test('parses a valid object', () {
       final item = parseDto(

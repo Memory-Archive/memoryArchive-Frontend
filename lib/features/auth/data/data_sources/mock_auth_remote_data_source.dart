@@ -9,6 +9,8 @@ import 'package:smart_memories/features/auth/data/models/user_dto.dart';
 /// Any email and password log in, except two that demonstrate errors:
 ///   * login with wrong@example.com     -> 401, a general error message
 ///   * register with taken@example.com  -> 409, an error under the email field
+///
+/// Error bodies use the real backend's shape: { "message": "..." }.
 class MockAuthRemoteDataSource implements AuthRemoteDataSource {
   static const String wrongEmail = 'wrong@example.com';
   static const String takenEmail = 'taken@example.com';
@@ -23,38 +25,29 @@ class MockAuthRemoteDataSource implements AuthRemoteDataSource {
   );
 
   @override
-  Future<AuthResponseDto> login(LoginRequestDto request) async {
+  Future<TokensDto> login(LoginRequestDto request) async {
     await Future<void>.delayed(mockLatency);
     if (request.email.toLowerCase() == wrongEmail) {
       throw mockHttpError(
         path: ApiEndpoints.login,
         statusCode: 401,
-        body: <String, dynamic>{
-          'message': 'Email or password is incorrect.',
-          'code': 'INVALID_CREDENTIALS',
-        },
+        body: <String, dynamic>{'message': 'Email or password is incorrect.'},
       );
     }
-    return _session();
+    return const TokensDto(
+      accessToken: 'mock-access-token',
+      refreshToken: 'mock-refresh-token',
+    );
   }
 
   @override
-  Future<AuthResponseDto> register(RegisterRequestDto request) async {
+  Future<UserDto> register(RegisterRequestDto request) async {
     await Future<void>.delayed(mockLatency);
     if (request.email.toLowerCase() == takenEmail) {
       throw mockHttpError(
-        path: ApiEndpoints.register,
+        path: ApiEndpoints.signup,
         statusCode: 409,
-        body: <String, dynamic>{
-          'message': 'Please fix the highlighted field.',
-          'code': 'VALIDATION_ERROR',
-          'errors': <Map<String, dynamic>>[
-            <String, dynamic>{
-              'field': 'email',
-              'message': 'This email is already registered.',
-            },
-          ],
-        },
+        body: <String, dynamic>{'message': 'Email is already registered'},
       );
     }
     _user = UserDto(
@@ -63,7 +56,7 @@ class MockAuthRemoteDataSource implements AuthRemoteDataSource {
       email: request.email,
       passwordChangedAt: DateTime.now(),
     );
-    return _session();
+    return _user;
   }
 
   @override
@@ -75,13 +68,5 @@ class MockAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
   Future<void> logout(String? refreshToken) async {
     await Future<void>.delayed(mockLatency);
-  }
-
-  AuthResponseDto _session() {
-    return AuthResponseDto(
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      user: _user,
-    );
   }
 }
