@@ -1,0 +1,20 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Generated code is not committed: run build_runner after pulling.
+*.g.dart
+*.freezed.dart
+
+# Local environment
+.env
+*.log
+.DS_Store
